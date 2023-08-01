@@ -3,6 +3,11 @@ from bs4 import BeautifulSoup
 import requests
 import base64
 import asyncio
+import sys
+
+if sys.platform == 'win32':
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 import aiohttp
 import math
 import random
@@ -138,9 +143,9 @@ async def proxy_request(website, loop=None):
         async with aiohttp.ClientSession() as session:
             try:
                 async with session.get(url, proxy=f"http://{proxy}", timeout=5) as response:
-                    return await response.text()
-            except Exception as e:
-                return None
+                    return await response.text(), proxy
+            except (aiohttp.ClientError, asyncio.TimeoutError):
+                return None, None
 
     dict_proxies = proxyscrape()
     tasks = []
@@ -154,7 +159,7 @@ async def proxy_request(website, loop=None):
             tasks.append(get_page(proxy, website))
 
         for future in asyncio.as_completed(tasks):
-            result = await future
+            result, proxy = await future
             if result is not None:
-                return result
-    return None
+                return result, proxy
+    return None, None
